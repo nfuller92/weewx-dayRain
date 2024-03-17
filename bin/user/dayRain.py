@@ -77,7 +77,7 @@ class DayRain(StdService):
 
             # Get archive records to prime 24h rainfall.
             today = datetime.date.today()
-            earliest_time: int = to_int(time.time() - time.mktime(today.timetuple()))
+            earliest_time: int = to_int(time.mktime(today.timetuple()))
             log.debug('Earliest time selected is %s' % timestamp_to_string(earliest_time))
 
             # Fetch the records.
@@ -87,9 +87,8 @@ class DayRain(StdService):
 
             # Save packets as appropriate.
             pkt_count = 0
+            one_day_later = earliest_time + 86400
             for pkt in archive_pkts:
-                pkt_time = pkt['dateTime']
-                one_day_later = to_int(pkt_time - time.mktime(today.timetuple()) + 86400)
                 if 'rain' in pkt and pkt['rain'] is not None and pkt['rain'] > 0.0:
                     self.total_rain += pkt['rain']
                     self.debit_list.append(FutureDebit(timestamp = one_day_later, amount = pkt['rain']))
@@ -132,7 +131,8 @@ class DayRain(StdService):
         # Be careful, the first time through, pkt['rain'] may be none.
         if 'rain' in pkt and pkt['rain'] is not None and pkt['rain'] > 0.0:
             pkt_time = pkt['dateTime']
-            one_day_later = to_int(pkt_time - time.mktime(datetime.date.today().timetuple()) + 86400)
+            pkt_dt = datetime.datetime.fromtimestamp(to_int(pkt_time))
+            one_day_later = to_int(time.mktime(pkt_dt.replace(hour=0, minute=0, second=0).timetuple())) + 86400
             self.total_rain += pkt['rain']
             self.debit_list.append(FutureDebit(timestamp = one_day_later, amount = pkt['rain']))
             log.debug('found rain of %f, adding to dayRain.' % pkt['rain'])
